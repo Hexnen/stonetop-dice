@@ -1,0 +1,37 @@
+{
+  "d2": {
+    "scale": 1.03,
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "d4": {
+    "scale": 0.93,
+    "offsetX": 0,
+    "offsetY": 0.015
+  },
+  "d6": {
+    "scale": 1,
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "d8": {
+    "scale": 0.94,
+    "offsetX": 0,
+    "offsetY": 0.01
+  },
+  "d10": {
+    "scale": 0.95,
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "d12": {
+    "scale": 0.94,
+    "offsetX": -0.005,
+    "offsetY": 0.01
+  },
+  "d20": {
+    "scale": 0.94,
+    "offsetX": 0,
+    "offsetY": 0.02
+  }
+}

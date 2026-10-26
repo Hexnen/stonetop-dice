@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stonetop Dice — dopasowanie ścianek</title>
+<style>
+  :root {
+    --bg: #1c1812; --panel: #2a241a; --line: #9a8a63; --accent: #cab68c;
+    --fg: #e8dcc0; --muted: #9c8e72;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 14px/1.4 system-ui, sans-serif;
+    background: var(--bg); color: var(--fg); padding: 16px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; color: var(--accent); }
+  p.lead { margin: 0 0 16px; color: var(--muted); }
+  .wrap { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tabs button {
+    background: var(--panel); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600;
+  }
+  .tabs button.active { background: var(--accent); color: #241c12; }
+  .stage { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  canvas {
+    flex: none; width: 420px; height: 420px;
+    background:
+      repeating-conic-gradient(#3a3326 0% 25%, #2a241a 0% 50%) 0 0 / 28px 28px;
+    border: 1px solid var(--line); border-radius: 8px; touch-action: none;
+  }
+  .controls { min-width: 260px; }
+  .ctl { margin-bottom: 14px; }
+  .ctl label { display: block; font-weight: 600; margin-bottom: 4px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  input[type=range] { flex: 1; }
+  input[type=number] {
+    width: 80px; background: var(--bg); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 4px; padding: 4px;
+  }
+  .pad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 4px; }
+  .pad button {
+    background: var(--panel); color: var(--accent); border: 1px solid var(--line);
+    border-radius: 6px; cursor: pointer; font-size: 18px; line-height: 1;
+  }
+  .pad button:hover { background: var(--line); color: #241c12; }
+  .pad .spacer { visibility: hidden; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .actions button {
+    background: var(--accent); color: #241c12; border: none; border-radius: 6px;
+    padding: 8px 14px; cursor: pointer; font-weight: 700;
+  }
+  .actions button.secondary { background: var(--panel); color: var(--fg); border: 1px solid var(--line); }
+  textarea {
+    width: 100%; height: 120px; margin-top: 8px; background: var(--bg); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-family: monospace;
+  }
+  .legend { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .legend b { color: var(--accent); }
+  .warn { color: #e0a35a; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>Stonetop Dice — dopasowanie ścianek</h1>
+  <p class="lead">
+    Dla każdego rodzaju kości rysowane są krawędzie realnej ścianki (wielokąt UV) z pierwszą
+    teksturą. Skaluj i przesuwaj grafikę, aż wypełni ściankę. Kliknij <b>Zapisz i wypal</b> —
+    serwer zapisze kalibrację i wypali tekstury. Następnie <b>przeładuj świat w Foundry</b>.
+    (Uruchom narzędzie przez <code>python tools/serve.py</code> → <code>http://localhost:8777/tools/dice-fit/</code>.)
+  </p>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="stage">
+    <canvas id="cv" width="420" height="420"></canvas>
+    <div class="controls">
+      <div class="ctl">
+        <label>Skala (powiększenie) — <span id="scaleVal"></span></label>
+        <div class="row">
+          <input type="range" id="scale" min="0.3" max="2.5" step="0.01">
+          <input type="number" id="scaleNum" min="0.1" max="5" step="0.01">
+        </div>
+      </div>
+
+      <div class="ctl">
+        <label>Przesunięcie w krawędź</label>
+        <div class="row" style="gap:16px; align-items:flex-start;">
+          <div class="pad">
+            <span class="spacer"></span>
+            <button data-dx="0" data-dy="-1" title="góra">▲</button>
+            <span class="spacer"></span>
+            <button data-dx="-1" data-dy="0" title="lewo">◄</button>
+            <button data-dx="0" data-dy="0" title="wyśrodkuj" style="font-size:13px;">◎</button>
+            <button data-dx="1" data-dy="0" title="prawo">►</button>
+            <span class="spacer"></span>
+            <button data-dx="0" data-dy="1" title="dół">▼</button>
+            <span class="spacer"></span>
+          </div>
+          <div>
+            <div class="row" style="margin-bottom:6px;">
+              <span style="width:60px;">offset X</span>
+              <input type="number" id="offX" min="-0.9" max="0.9" step="0.005">
+            </div>
+            <div class="row">
+              <span style="width:60px;">offset Y</span>
+              <input type="number" id="offY" min="-0.9" max="0.9" step="0.005">
+            </div>
+            <div class="legend">krok ◄►▲▼ = <b>0.01</b> cella (<b>Ctrl</b> = 0.005)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="reset" class="secondary">Reset tej kości</button>
+        <button id="save">Zapisz i wypal</button>
+        <button id="export" class="secondary">Pobierz calibration.json</button>
+      </div>
+      <div class="warn" id="saveInfo"></div>
+
+      <div class="ctl" style="margin-top:16px;">
+        <label>Wklej / podejrzyj JSON</label>
+        <textarea id="json" spellcheck="false"></textarea>
+        <div class="actions">
+          <button id="load" class="secondary">Wczytaj z pola</button>
+        </div>
+        <div class="warn" id="warn"></div>
+      </div>
+
+      <div class="legend">
+        <b style="color:#cab68c;">Żółty</b> obrys = krawędź ścianki (obszar widoczny na kości).
+        Przyciemniony obszar zostanie obcięty na realnej ściance.
+      </div>
+    </div>
+  </div>
+
+<script>
+"use strict";
+
+// Wielokąty UV (cell-local [0,1], y w dół) — skopiowane z skilla dsn-face-uv.json.
+const SHAPES = {
+  d2:  { face: "d2f1",    polygon: null /* okrągła moneta — pełny dysk */ },
+  d4:  { face: "d4bg1",   polygon: [[0.500,0.000],[0.992,0.851],[0.009,0.851]] },
+  d6:  { face: "face1",   polygon: [[0.013,0.012],[0.990,0.012],[0.990,0.989],[0.013,0.989]] },
+  d8:  { face: "d8face1", polygon: [[0.503,0.003],[0.968,0.808],[0.038,0.808]] },
+  d10: { face: "d10f2",   polygon: [[0.496,0.003],[0.860,0.774],[0.496,0.955],[0.132,0.774]] },
+  d12: { face: "d12f1",   polygon: [[0.500,0.004],[0.992,0.361],[0.804,0.938],[0.197,0.938],[0.009,0.361]] },
+  d20: { face: "d20f1",   polygon: [[0.501,0.002],[0.999,0.864],[0.003,0.864]] }
+};
+const ORDER = ["d2", "d4", "d6", "d8", "d10", "d12", "d20"];
+const ID = (k) => ({ scale: 1, offsetX: 0, offsetY: 0 });
+
+// Stan kalibracji per-kość.
+const state = {};
+ORDER.forEach((k) => (state[k] = ID()));
+let active = "d6";
+
+const imgCache = {};
+function loadImage(name) {
+  if (imgCache[name]) return imgCache[name];
+  const img = new Image();
+  img.src = `../../textures/${name}.webp`;
+  imgCache[name] = img;
+  img.onload = () => draw();
+  img.onerror = () => draw();
+  return img;
+}
+
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const S = cv.width; // canvas = kwadratowy cell
+
+function draw() {
+  ctx.clearRect(0, 0, S, S);
+
+  // 1) tekstura ścianki wg wspólnego wzoru przekształcenia
+  const t = state[active];
+  const img = loadImage(SHAPES[active].face);
+  if (img.complete && img.naturalWidth) {
+    const s = S * t.scale;
+    const dx = (S - s) / 2 + t.offsetX * S;
+    const dy = (S - s) / 2 + t.offsetY * S;
+    ctx.drawImage(img, dx, dy, s, s);
+  }
+
+  const poly = SHAPES[active].polygon;
+  // okrągła ścianka (d2) — koło wpisane w cell
+  const pathFace = () => {
+    ctx.beginPath();
+    if (poly) {
+      poly.forEach((p, i) => {
+        const x = p[0] * S, y = p[1] * S;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.closePath();
+    } else {
+      ctx.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2);
+    }
+  };
+
+  // 2) przyciemnienie obszaru POZA ścianką (to, co zostanie obcięte)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, S, S);
+  pathFace();
+  ctx.fillStyle = "rgba(10,8,5,0.6)";
+  ctx.fill("evenodd");
+  ctx.restore();
+
+  // 3) ramka całego cella
+  ctx.strokeStyle = "rgba(154,138,99,0.5)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, S - 1, S - 1);
+
+  // 4) krawędzie ścianki (wielokąt UV)
+  ctx.save();
+  pathFace();
+  ctx.strokeStyle = "#cab68c";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ---- powiązanie kontrolek z aktywną kością ----
+const el = (id) => document.getElementById(id);
+function syncInputs() {
+  const t = state[active];
+  el("scale").value = t.scale;
+  el("scaleNum").value = round(t.scale);
+  el("scaleVal").textContent = round(t.scale);
+  el("offX").value = round(t.offsetX);
+  el("offY").value = round(t.offsetY);
+  el("json").value = JSON.stringify(state, null, 2);
+}
+const round = (n) => Math.round(n * 1000) / 1000;
+
+function buildTabs() {
+  const tabs = el("tabs");
+  ORDER.forEach((k) => {
+    const b = document.createElement("button");
+    b.textContent = k;
+    b.className = k === active ? "active" : "";
+    b.onclick = () => {
+      active = k;
+      [...tabs.children].forEach((c) => (c.className = c.textContent === k ? "active" : ""));
+      syncInputs();
+      draw();
+    };
+    tabs.appendChild(b);
+  });
+}
+
+function setScale(v) {
+  state[active].scale = Math.max(0.05, v);
+  syncInputs();
+  draw();
+}
+function nudge(dx, dy, step = 0.01) {
+  const t = state[active];
+  if (dx === 0 && dy === 0) { t.offsetX = 0; t.offsetY = 0; }
+  else { t.offsetX = clamp(t.offsetX + dx * step); t.offsetY = clamp(t.offsetY + dy * step); }
+  syncInputs();
+  draw();
+}
+const clamp = (n) => Math.max(-0.95, Math.min(0.95, n));
+
+el("scale").addEventListener("input", (e) => setScale(parseFloat(e.target.value)));
+el("scaleNum").addEventListener("input", (e) => setScale(parseFloat(e.target.value) || 1));
+el("offX").addEventListener("input", (e) => { state[active].offsetX = clamp(parseFloat(e.target.value) || 0); syncInputs(); draw(); });
+el("offY").addEventListener("input", (e) => { state[active].offsetY = clamp(parseFloat(e.target.value) || 0); syncInputs(); draw(); });
+document.querySelectorAll(".pad button").forEach((b) =>
+  b.addEventListener("click", (e) => nudge(+b.dataset.dx, +b.dataset.dy, e.ctrlKey ? 0.005 : 0.01))
+);
+el("reset").addEventListener("click", () => { state[active] = ID(); syncInputs(); draw(); });
+
+const serialize = () => JSON.stringify(state, null, 2);
+
+function downloadJson() {
+  const blob = new Blob([serialize()], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "calibration.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+el("export").addEventListener("click", downloadJson);
+
+const info = (msg, ok) => {
+  const e = el("saveInfo");
+  e.style.color = ok ? "#7fd18a" : "#e0a35a";
+  e.textContent = msg;
+};
+
+// "Zapisz i wypal" — wysyła kalibrację do lokalnego serwera (tools/serve.py), który
+// zapisuje data/calibration.json i wypala tekstury do textures/_fit/. Wszystko z
+// interfejsu; zostaje tylko przeładowanie świata w Foundry. Gdy strona nie jest
+// serwowana przez serve.py (POST /bake niedostępny), proponuje pobranie pliku.
+el("save").addEventListener("click", async () => {
+  const btn = el("save");
+  btn.disabled = true;
+  info("Wypalam…", true);
+  try {
+    const res = await fetch("/bake", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: serialize()
+    });
+    const j = await res.json();
+    if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
+    const list = j.baked && j.baked.length ? j.baked.join(", ") : "—";
+    info(`Wypalono ${j.total} tekstur (${list}). Teraz przeładuj świat w Foundry.`, true);
+  } catch (err) {
+    if (err instanceof TypeError || location.protocol === "file:") {
+      // fetch nie dotarł do serwera (zła strona/origin lub serve.py nie działa)
+      downloadJson();
+      info("Serwer wypalania nieosiągalny — otwórz narzędzie przez http://localhost:8777/tools/dice-fit/index.html (uruchom 'python tools/serve.py'). Tymczasowo pobrano calibration.json.", false);
+    } else {
+      // serwer odpowiedział błędem wypalania
+      info("Błąd wypalania: " + err.message, false);
+    }
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+el("load").addEventListener("click", () => {
+  el("warn").textContent = "";
+  try {
+    const parsed = JSON.parse(el("json").value);
+    ORDER.forEach((k) => {
+      const t = parsed[k];
+      state[k] = t
+        ? { scale: +t.scale || 1, offsetX: +t.offsetX || 0, offsetY: +t.offsetY || 0 }
+        : ID();
+    });
+    syncInputs();
+    draw();
+  } catch (err) {
+    el("warn").textContent = "Niepoprawny JSON: " + err.message;
+  }
+});
+
+buildTabs();
+syncInputs();
+draw();
+</script>
+</body>
+</html>

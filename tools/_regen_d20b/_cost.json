@@ -1,0 +1,8 @@
+{
+  "usd": 0.0925,
+  "model": "gpt-image-2",
+  "variant": "full",
+  "dice": [
+    "d20"
+  ]
+}

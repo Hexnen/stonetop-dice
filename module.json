@@ -1,0 +1,44 @@
+{
+  "id": "stonetop-dice",
+  "title": "Stonetop Dice (Dice So Nice)",
+  "description": "Custom carved-stone d6 faces for the Stonetop system, rendered in 3D via Dice So Nice!.",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "hexerpegi"
+    }
+  ],
+  "esmodules": [
+    "scripts/stonetop-dice.mjs"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "relationships": {
+    "requires": [
+      {
+        "id": "dice-so-nice",
+        "type": "module"
+      }
+    ],
+    "systems": [
+      {
+        "id": "stonetop",
+        "type": "system"
+      }
+    ]
+  },
+  "flags": {},
+  "url": "https://github.com/Hexnen/stonetop-dice",
+  "manifest": "https://github.com/Hexnen/stonetop-dice/releases/latest/download/module.json",
+  "download": "https://github.com/Hexnen/stonetop-dice/releases/download/v1.0.0/module.zip",
+  "bugs": "https://github.com/Hexnen/stonetop-dice/issues"
+}
