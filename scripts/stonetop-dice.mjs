@@ -79,6 +79,9 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
       system: "stonetop",
       colorset: "stonetop",
       labels: range(1, 4).map(() => `${TEX}/d4blank.webp`),
+      // Transparent top-level bumps: DSN only merges backgrounds.bumpMaps onto the d4
+      // when this array is non-empty — without it the d4 renders FLAT (no carving).
+      bumpMaps: range(1, 4).map(() => `${TEX}/d4blank.webp`),
       backgrounds: {
         labels: range(1, 4).map((n) => tex("d4", `d4bg${n}`)),
         bumpMaps: range(1, 4).map((n) => tex("d4", `d4bg${n}-bump`))
@@ -143,6 +146,9 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
       system: "stonetop-brown",
       colorset: "stonetop-brown",
       labels: range(1, 4).map(() => `${BROWN}/d4blank.webp`),
+      // Transparent top-level bumps: DSN only merges backgrounds.bumpMaps onto the d4
+      // when this array is non-empty — without it the d4 renders FLAT (no carving).
+      bumpMaps: range(1, 4).map(() => `${BROWN}/d4blank.webp`),
       backgrounds: {
         labels: range(1, 4).map((n) => btex("d4", `d4bg${n}`)),
         bumpMaps: range(1, 4).map((n) => btex("d4", `d4bg${n}-bump`))
@@ -198,6 +204,9 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
       system: "stonetop-brownbody",
       colorset: "stonetop-brownbody",
       labels: range(1, 4).map(() => `${TEX}/d4blank.webp`),
+      // Transparent top-level bumps: DSN only merges backgrounds.bumpMaps onto the d4
+      // when this array is non-empty — without it the d4 renders FLAT (no carving).
+      bumpMaps: range(1, 4).map(() => `${TEX}/d4blank.webp`),
       backgrounds: {
         labels: range(1, 4).map((n) => tex("d4", `d4bg${n}`)),
         bumpMaps: range(1, 4).map((n) => tex("d4", `d4bg${n}-bump`))
