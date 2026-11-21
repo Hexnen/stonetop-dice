@@ -15,8 +15,33 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
     .catch(() => []);
   const tex = (type, rel) => `${TEX}/${baked.includes(type) ? "_fit/" : ""}${rel}.webp`;
 
+  // The umbrella module moinens-assorted-dice registers the SAME system ids (stonetop,
+  // stonetop-brown, stonetop-brownbody), texture ids (stonetop-stone, stonetop-stone-tint,
+  // stonetop-brown-stone) and colorset names with different values — whichever loads last
+  // would overwrite the other. When the umbrella is active we yield those three sets to it
+  // and register only our decal sets. Only the main "stonetop" system/colorset may claim
+  // "preferred", and only in a Stonetop world (DSN keeps the FIRST preferred system but the
+  // LAST preferred colorset, so everything else stays "default").
+  const umbrella = !!game.modules.get("moinens-assorted-dice")?.active;
+  const mainMode = !umbrella && game.system?.id === "stonetop" ? "preferred" : "default";
+  console.log(
+    `${MODULE_ID} | ${umbrella
+      ? "moinens-assorted-dice active: shared Stonetop sets yielded to it, registering decal sets only"
+      : `standalone mode: registering all sets, main stonetop system/colorset as "${mainMode}"`}`
+  );
+
+  // Tintable stone for the decal sets, under an id the umbrella does not use, so the decals
+  // work in both modes (same files as stonetop-stone-tint below).
+  await dice3d.addTexture("stonetop-dice-decal-stone-tint", {
+    name: "Stonetop Decal Stone (tintable)",
+    composite: "multiply",
+    source: `${TEX}/stone-tint.webp`,
+    bump: `${TEX}/stone-bump.webp`
+  });
+
+  if (!umbrella) {
   // Register the dice theme and make it the default look while playing Stonetop.
-  dice3d.addSystem({ id: "stonetop", name: "Stonetop" }, "preferred");
+  dice3d.addSystem({ id: "stonetop", name: "Stonetop" }, mainMode);
 
   // Stone surface texture — covers the die body (faces without an image label, e.g. d4,
   // plus all bevels/edges) so everything reads as carved parchment. Await before the
@@ -53,7 +78,7 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
       material: "wood",
       font: "Arial"
     },
-    "preferred"
+    mainMode
   );
 
   // Register a die: maps an ordered list of texture base-names to face labels + bumps,
@@ -107,7 +132,7 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
   // for the bevels/chamfers. Same per-die calibration (loaded from brown/_fit/).
   const BROWN = `${TEX}/brown`;
   const btex = (type, rel) => `${BROWN}/${baked.includes(type) ? "_fit/" : ""}${rel}.webp`;
-  dice3d.addSystem({ id: "stonetop-brown", name: "Stonetop (Brown)" }, "preferred");
+  dice3d.addSystem({ id: "stonetop-brown", name: "Stonetop (Brown)" }, "default");
   await dice3d.addTexture("stonetop-brown-stone", {
     name: "Stonetop Brown Stone",
     composite: "source-over",
@@ -127,7 +152,7 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
       material: "wood",
       font: "Arial"
     },
-    "preferred"
+    "default"
   );
   const registerBrown = (type, shape, names) =>
     dice3d.addDicePreset(
@@ -171,7 +196,7 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
   // (multiply) over background #714e30 turns the body + edges brown while every face
   // stays the original carved parchment. This is DSN's own per-die colour setting —
   // change `background` (or the DSN "Dice Color" picker) to retint with no new files.
-  dice3d.addSystem({ id: "stonetop-brownbody", name: "Stonetop (Brown Body)" }, "preferred");
+  dice3d.addSystem({ id: "stonetop-brownbody", name: "Stonetop (Brown Body)" }, "default");
   dice3d.addColorset(
     {
       name: "stonetop-brownbody",
@@ -185,7 +210,7 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
       material: "wood",
       font: "Arial"
     },
-    "preferred"
+    "default"
   );
   const registerBody = (type, shape, names) =>
     dice3d.addDicePreset(
@@ -221,6 +246,8 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
   registerBody("d12", "d12", range(1, 12).map((n) => `d12f${n}`));
   registerBody("d20", "d20", range(1, 20).map((n) => `d20f${n}`));
 
+  } // end if (!umbrella)
+
   // ── New set: "Stonetop (Decal)" ───────────────────────────────────────────
   // Same carved-stone look, but the per-face art is a transparent line+highlight
   // DECAL (textures/decal/*.webp): only the dark engraving lines and bright carved-
@@ -228,7 +255,7 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
   // colorset/texture here, so the whole die can be recoloured without regenerating
   // faces. Decals reuse the same per-die calibration and the original engraving
   // heightmaps (bumpMaps) for true geometric depth.
-  dice3d.addSystem({ id: "stonetop-decal", name: "Stonetop (Decal)" }, "preferred");
+  dice3d.addSystem({ id: "stonetop-decal", name: "Stonetop (Decal)" }, "default");
 
   dice3d.addColorset(
     {
@@ -239,11 +266,11 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
       background: "#cab68c", // stone colour shown through the transparent decal faces
       edge: "#9a8a63",
       outline: "#241c12",
-      texture: "stonetop-stone-tint", // tintable: stone colour = `background`, recolourable
+      texture: "stonetop-dice-decal-stone-tint", // tintable: stone colour = `background`, recolourable
       material: "wood",
       font: "Arial"
     },
-    "preferred"
+    "default"
   );
 
   const registerDecalDie = (type, shape, names) =>
@@ -269,7 +296,7 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
   // polygon, so they map at identity (no calibration). Generated by tools/make_d8_norse.py.
   // Only d8 so far; extend with more dice as their Norse decals are generated.
   const NORSE = `${TEX}/decal-norse`;
-  dice3d.addSystem({ id: "stonetop-norse-decal", name: "Stonetop Norse (Decal)" }, "preferred");
+  dice3d.addSystem({ id: "stonetop-norse-decal", name: "Stonetop Norse (Decal)" }, "default");
 
   dice3d.addColorset(
     {
@@ -280,11 +307,11 @@ Hooks.once("diceSoNiceReady", async (dice3d) => {
       background: "#cab68c", // stone colour — change this (or DSN "Dice Color") to recolour
       edge: "#9a8a63",
       outline: "#241c12",
-      texture: "stonetop-stone-tint", // tintable grayscale stone (multiply over background)
+      texture: "stonetop-dice-decal-stone-tint", // tintable grayscale stone (multiply over background)
       material: "wood",
       font: "Arial"
     },
-    "preferred"
+    "default"
   );
 
   dice3d.addDicePreset(
